@@ -1,20 +1,8 @@
-CROSS_COMPILE ?= 
-CC := $(CROSS_COMPILE)gcc
-CFLAGS = -Wall -Wextra -g
-TARGET = writer
-SRCS = writer.c
-OBJS = $(SRCS:.c=.o)
-
-# Default target 
-all: $(TARGET)
-
-$(TARGET): $(OBJS) 
-		$(CC) $(CFLAGS) -o $@ $^
-
-%.o	: %.c
-		$(CC) $(CFLAGS) -c $< -O $@
-
-clean	:
-		rm -f $(OBJS) $(TARGET)
-
-.PHONY: all clean
+CC ?= gcc
+all: writer
+writer: writer.o
+    $(CC) $(LDFLAGS) writer.o -o writer
+writer.o: writer.c
+    $(CC) $(CFLAGS) -c writer.c
+clean:
+    rm -f writer *.o
