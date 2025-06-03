@@ -1,45 +1,78 @@
 #!/bin/sh
+# Tester script for assignment 1 and assignment 2
+# Author: Siddhant Jajoo
 
-#Tester script for assignment 1, 2, and 4
+set -e
+set -u
 
-#Modified for Buildroot environment
+NUMFILES=10
+WRITESTR=AELD_IS_FUN
+WRITEDIR=/tmp/aeld-data
+READDIR=/etc/finder-app
+OUTPUTFILE=/tmp/assignment4-result.txt
+username=$(cat ${READDIR}/conf/username.txt)
 
-set -e set -u
-
-NUMFILES=10 WRITESTR=AELD_IS_FUN WRITEDIR=/tmp/aeld-data WRITER=/usr/bin/writer FINDER=/usr/bin/finder.sh CONF_DIR=/etc/finder-app/conf USERNAME=$(cat $CONF_DIR/username.txt)
-
-if [ $# -lt 3 ] then echo "Using default value ${WRITESTR} for string to write" if [ $# -lt 1 ] then echo "Using default value ${NUMFILES} for number of files to write" else NUMFILES=$1 fi else NUMFILES=$1 WRITESTR=$2 WRITEDIR=/tmp/aeld-data/$3 fi
+if [ $# -lt 3 ]
+then
+	echo "Using default value ${WRITESTR} for string to write"
+	if [ $# -lt 1 ]
+	then
+		echo "Using default value ${NUMFILES} for number of files to write"
+	else
+		NUMFILES=$1
+	fi	
+else
+	NUMFILES=$1
+	WRITESTR=$2
+	WRITEDIR=/tmp/aeld-data/$3
+fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
 
 echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 
-#檢查必要文件和目錄
+rm -rf "${WRITEDIR}"
 
-if [ ! -x "$WRITER" ]; then echo "Error: writer executable not found at $WRITER" exit 1 fi
+# create $WRITEDIR if not assignment1
+assignment=`cat ${READDIR}/conf/assignment.txt`
 
-if [ ! -x "$FINDER" ]; then echo "Error: finder.sh not found at $FINDER" exit 1 fi
+if [ $assignment != 'assignment1' ]
+then
+	mkdir -p "$WRITEDIR"
 
-if [ ! -f "$CONF_DIR/username.txt" ]; then echo "Error: username.txt not found at $CONF_DIR/username.txt" exit 1 fi
+	#The WRITEDIR is in quotes because if the directory path consists of spaces, then variable substitution will consider it as multiple argument.
+	#The quotes signify that the entire string in WRITEDIR is a single string.
+	#This issue can also be resolved by using double square brackets i.e [[ ]] instead of using quotes.
+	if [ -d "$WRITEDIR" ]
+	then
+		echo "$WRITEDIR created"
+	else
+		exit 1
+	fi
+fi
+#echo "Removing the old writer utility and compiling as a native application"
+#make clean
+#make
 
-#創建 WRITEDIR
+for i in $( seq 1 $NUMFILES)
+do
+	echo "Writing $WRITESTR to file ${WRITEDIR}/${username}$i.txt"
+	writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+done
 
-rm -rf "${WRITEDIR}" mkdir -p "$WRITEDIR"
+OUTPUTSTRING=$(finder.sh "$WRITEDIR" "$WRITESTR") 
 
-if [ -d "$WRITEDIR" ] then echo "$WRITEDIR created" else echo "Error: Failed to create $WRITEDIR" exit 1 fi
+#echo "Output string = ${OUTPUTSTRING}" 
+echo ${OUTPUTSTRING} > ${OUTPUTFILE}
+# remove temporary directories
+rm -rf /tmp/aeld-data
 
-#寫入測試文件
-
-for i in $( seq 1 $NUMFILES ) do $WRITER "$WRITEDIR/${USERNAME}$i.txt" "$WRITESTR" done
-
-#運行 finder.sh 並將輸出寫入 /tmp/assignment4-result.txt
-
-OUTPUTSTRING=$($FINDER "$WRITEDIR" "$WRITESTR") echo "$OUTPUTSTRING" > /tmp/assignment4-result.txt
-
-
-#檢查輸出文件是否生成
-if [ ! -f /tmp/assignment4-result.txt ]; then echo "Error: Failed to write output to /tmp/assignment4-result.txt" exit 1 fi
-
-
-#驗證 finder.sh 輸出
-set +e echo "$OUTPUTSTRING" | grep "${MATCHSTR}" if [ $? -eq 0 ]; then echo "Success: Finder output matches expected string" exit 0 else echo "Failed: Expected '${MATCHSTR}' in output but found '$OUTPUTSTRING'" exit 1 fi
+set +e
+echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
+if [ $? -eq 0 ]; then
+	echo "success"
+	exit 0
+else
+	echo "failed: expected  ${MATCHSTR} in ${OUTPUTSTRING} but instead found"
+	exit 1
+fi

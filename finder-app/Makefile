@@ -1,9 +1,20 @@
-CC ?= gcc CFLAGS = -Wall -g LDFLAGS = -Wall -g
+CROSS_COMPILE ?= 
+CC := $(CROSS_COMPILE)gcc
+CFLAGS = -Wall -Wextra -g
+TARGET = writer
+SRCS = writer.c
+OBJS = $(SRCS:.c=.o)
 
-all: writer
+# Default target 
+all: $(TARGET)
 
-writer: writer.o $(CC) $(LDFLAGS) writer.o -o writer
+$(TARGET): $(OBJS) 
+		$(CC) $(CFLAGS) -o $@ $^
 
-writer.o: writer.c $(CC) $(CFLAGS) -c writer.c
+%.o	: %.c
+		$(CC) $(CFLAGS) -c $< -O $@
 
-clean: rm -f writer *.o
+clean	:
+		rm -f $(OBJS) $(TARGET)
+
+.PHONY: all clean
