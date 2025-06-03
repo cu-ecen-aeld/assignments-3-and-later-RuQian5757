@@ -1,6 +1,6 @@
 #!/bin/sh
-# Tester script for assignment 1 and assignment 2
-# Author: Siddhant Jajoo
+# Tester script for Assignment 4
+# Author: Siddhant Jajoo, modified for Assignment 4
 
 set -e
 set -u
@@ -10,69 +10,65 @@ WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
 READDIR=/etc/finder-app
 OUTPUTFILE=/tmp/assignment4-result.txt
-username=$(cat ${READDIR}/conf/username.txt)
+writer=/usr/bin/writer
+finder=/usr/bin/finder.sh
 
-if [ $# -lt 3 ]
-then
-	echo "Using default value ${WRITESTR} for string to write"
-	if [ $# -lt 1 ]
-	then
-		echo "Using default value ${NUMFILES} for number of files to write"
-	else
-		NUMFILES=$1
-	fi	
+# 檢查配置文件
+if [ ! -f "${READDIR}/conf/username.txt" ]; then
+    echo "Error: ${READDIR}/conf/username.txt not found"
+    exit 1
+fi
+username=$(cat ${READDIR}/conf/username.txt)
+if [ -z "$username" ]; then
+    echo "Error: username.txt is empty"
+    exit 1
+fi
+
+# 處理參數
+if [ $# -lt 3 ]; then
+    echo "Using default value ${WRITESTR} for string to write"
+    if [ $# -lt 1 ]; then
+        echo "Using default value ${NUMFILES} for number of files to write"
+    else
+        NUMFILES=$1
+    fi    
 else
-	NUMFILES=$1
-	WRITESTR=$2
-	WRITEDIR=/tmp/aeld-data/$3
+    NUMFILES=$1
+    WRITESTR=$2
+    WRITEDIR=/tmp/aeld-data/$3
 fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
 
 echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
 
+# 創建寫入目錄
 rm -rf "${WRITEDIR}"
-
-# create $WRITEDIR if not assignment1
-assignment=`cat ${READDIR}/conf/assignment.txt`
-
-if [ $assignment != 'assignment1' ]
-then
-	mkdir -p "$WRITEDIR"
-
-	#The WRITEDIR is in quotes because if the directory path consists of spaces, then variable substitution will consider it as multiple argument.
-	#The quotes signify that the entire string in WRITEDIR is a single string.
-	#This issue can also be resolved by using double square brackets i.e [[ ]] instead of using quotes.
-	if [ -d "$WRITEDIR" ]
-	then
-		echo "$WRITEDIR created"
-	else
-		exit 1
-	fi
+mkdir -p "$WRITEDIR"
+if [ ! -d "$WRITEDIR" ]; then
+    echo "Failed to create $WRITEDIR"
+    exit 1
 fi
-#echo "Removing the old writer utility and compiling as a native application"
-#make clean
-#make
 
-for i in $( seq 1 $NUMFILES)
-do
-	echo "Writing $WRITESTR to file ${WRITEDIR}/${username}$i.txt"
-	writer "$WRITEDIR/${username}$i.txt" "$WRITESTR"
+# 寫入檔案
+for i in $(seq 1 $NUMFILES); do
+    echo "Writing $WRITESTR to file ${WRITEDIR}/${username}$i.txt"
+    $writer "${WRITEDIR}/${username}$i.txt" "$WRITESTR"
 done
 
-OUTPUTSTRING=$(finder.sh "$WRITEDIR" "$WRITESTR") 
+# 執行 finder.sh 並保存輸出
+OUTPUTSTRING=$($finder "$WRITEDIR" "$WRITESTR")
+echo "${OUTPUTSTRING}" > "${OUTPUTFILE}"
 
-#echo "Output string = ${OUTPUTSTRING}" 
-echo ${OUTPUTSTRING} > ${OUTPUTFILE}
-# remove temporary directories
-rm -rf /tmp/aeld-data
-
+# 驗證輸出
 set +e
-echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
+echo "${OUTPUTSTRING}" | grep "${MATCHSTR}"
 if [ $? -eq 0 ]; then
-	echo "success"
-	exit 0
+    echo "success"
+    rm -rf "${WRITEDIR}"
+    exit 0
 else
-	echo "failed: expected  ${MATCHSTR} in ${OUTPUTSTRING} but instead found"
-	exit 1
+    echo "failed: expected ${MATCHSTR} in ${OUTPUTSTRING} but instead found"
+    rm -rf "${WRITEDIR}"
+    exit 1
 fi
