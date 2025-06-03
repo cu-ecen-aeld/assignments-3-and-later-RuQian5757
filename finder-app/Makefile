@@ -1,9 +1,9 @@
-CC = $(CROSS_COMPILE)gcc 
-CFLAGS = -g
+CC ?= gcc CFLAGS = -Wall -g LDFLAGS = -Wall -g
 
-writer: writer.o
+all: writer
 
-writer.o: writer.c
+writer: writer.o $(CC) $(LDFLAGS) writer.o -o writer
 
-clean:
-	rm -rf writer.o writer
+writer.o: writer.c $(CC) $(CFLAGS) -c writer.c
+
+clean: rm -f writer *.o
